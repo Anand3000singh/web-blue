@@ -29,151 +29,120 @@
       color: var(--text-main);
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      overflow: hidden; /* Keeps app rigid for the keyboard */
     }
 
-    /* --- TOP HEADER --- */
-    .header-area {
-      padding: 15px 15px 0 15px;
-      flex-shrink: 0;
-    }
-
+    .header-area { padding: 15px 15px 0 15px; flex-shrink: 0; }
     h2 { margin: 0 0 15px 0; font-size: 1.5rem; font-weight: 700; color: #ffffff; }
 
-    .top-controls { display: flex; gap: 10px; }
-    
+    .top-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     button.ctrl-btn {
-      flex: 1; padding: 12px; border: none; border-radius: 8px;
-      font-weight: 600; font-size: 0.95rem; cursor: pointer; color: #ffffff;
-      transition: all 0.2s ease;
+      padding: 10px; border: none; border-radius: 8px;
+      font-weight: 600; font-size: 0.9rem; cursor: pointer; color: #ffffff;
+      transition: all 0.2s ease; display: flex; justify-content: center; align-items: center; gap: 5px;
     }
     
-    #connectBtn, #disconnectBtn, #toggleMacrosBtn { background-color: var(--btn-inactive); }
+    #connectBtn, #reconnectBtn, #disconnectBtn, #toggleMacrosBtn { background-color: var(--btn-inactive); }
     #disconnectBtn:not([disabled]) { background-color: var(--color-err); }
     #toggleMacrosBtn.active { background-color: var(--btn-active); }
     button[disabled] { opacity: 0.5; cursor: not-allowed; }
 
-    /* --- MAIN CONTENT AREA --- */
     .main-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0; 
-      padding: 15px;
-      gap: 15px;
+      flex: 1; display: flex; flex-direction: column;
+      min-height: 0; padding: 15px; gap: 15px;
     }
 
-    /* --- MACRO PAGE (Top 80% when active) --- */
+    /* --- MACRO PAGE (Freeform Grid) --- */
     #macro-page {
-      display: none; 
-      background-color: var(--panel-bg);
-      border-radius: 12px;
-      padding: 15px;
-      overflow-y: auto;
+      display: none; background-color: var(--panel-bg);
+      border-radius: 12px; padding: 15px; 
+      overflow-y: auto; /* Fixes scrolling */
+      -webkit-overflow-scrolling: touch; /* Buttery smooth scroll on mobile */
+      overscroll-behavior: contain; /* Stops accidental pull-to-refresh */
       border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    /* ADVANCED GRID SYSTEM */
     .macro-grid {
-      display: grid;
-      /* Base column width is around 100px, stretches to fill */
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      /* Dense packs items nicely even if mixing big and small buttons */
-      grid-auto-flow: dense; 
-      gap: 12px;
-      margin-top: 15px;
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); /* Tiny base blocks */
+      grid-auto-rows: 75px; /* Square height matching width */
+      grid-auto-flow: dense; /* Packs small blocks into empty spaces */
+      gap: 10px; margin-top: 15px;
     }
 
     .add-macro-btn {
       width: 100%; background-color: rgba(255, 255, 255, 0.1);
       border: 1px dashed var(--text-muted); color: var(--text-main);
-      padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;
-      margin-bottom: 5px;
+      padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 5px;
     }
 
     .custom-macro { 
-      background-color: var(--btn-macro); padding: 15px 12px; font-size: 1rem; font-weight: bold;
-      border-radius: 10px; border: none; color: white; cursor: pointer;
-      word-wrap: break-word; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      background-color: var(--btn-macro); font-size: 1rem; font-weight: bold;
+      border-radius: 12px; border: none; color: white; cursor: pointer;
+      word-wrap: break-word; box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
       transition: transform 0.1s;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      padding: 5px;
     }
     .custom-macro:active { transform: scale(0.95); }
 
-    /* GRID SIZES */
-    .size-1 { grid-column: span 1; }
-    .size-2 { grid-column: span 2; }
-    .size-full { grid-column: 1 / -1; } /* Spans entire row */
-
     /* --- TERMINAL AREA --- */
     #terminal-container {
-      flex: 1; 
-      background-color: var(--term-bg);
-      border-radius: 12px;
-      padding: 15px;
-      overflow-y: auto;
+      flex: 1; background-color: var(--term-bg); border-radius: 12px; padding: 15px;
+      overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 0.9rem;
-      line-height: 1.5;
+      font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; line-height: 1.5;
     }
-
     #terminal-container::-webkit-scrollbar { width: 10px; }
     #terminal-container::-webkit-scrollbar-track { background: transparent; }
     #terminal-container::-webkit-scrollbar-thumb { background-color: #334155; border-radius: 10px; }
     .log-line { word-wrap: break-word; margin-bottom: 4px; }
 
-    /* --- VIEW TOGGLE LOGIC --- */
     body.show-macros #macro-page { display: block; flex: 4; }
     body.show-macros #terminal-container { flex: 1; }
     body.show-macros .pebble-wrapper { display: none; }
 
     /* --- THE PEBBLE INPUT --- */
     .pebble-wrapper { padding: 0 15px 15px 15px; flex-shrink: 0; }
-
     .input-area {
-      display: flex; background-color: var(--panel-bg);
-      backdrop-filter: blur(10px); border-radius: 30px;
-      padding: 6px 6px 6px 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+      display: flex; background-color: var(--panel-bg); backdrop-filter: blur(10px);
+      border-radius: 30px; padding: 6px 6px 6px 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.4);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
-
     input[type="text"] {
-      flex-grow: 1; background: transparent; border: none;
-      color: var(--text-main); font-family: monospace; font-size: 1rem;
-      outline: none; padding-right: 10px;
+      flex-grow: 1; background: transparent; border: none; color: var(--text-main);
+      font-family: monospace; font-size: 1rem; outline: none; padding-right: 10px;
     }
     input[type="text"]::placeholder { color: var(--text-muted); }
-
     #sendBtn {
-      flex: 0 0 auto; background-color: var(--btn-active);
-      padding: 12px 24px; border-radius: 25px; border: none; color: white;
-      font-weight: bold; cursor: pointer;
+      flex: 0 0 auto; background-color: var(--btn-active); padding: 12px 24px;
+      border-radius: 25px; border: none; color: white; font-weight: bold; cursor: pointer;
     }
     #sendBtn[disabled] { background-color: var(--btn-inactive); opacity: 0.5; }
 
-    /* --- MODAL --- */
+    /* --- MODALS --- */
     .modal-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
-      z-index: 200; justify-content: center; align-items: center;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 200;
+      justify-content: center; align-items: center;
     }
     .modal {
-      background: var(--panel-bg); padding: 20px; border-radius: 15px;
-      width: 80%; max-width: 300px; border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      background: var(--panel-bg); padding: 20px; border-radius: 15px; width: 85%;
+      max-width: 350px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.8);
     }
     .modal h3 { margin-top: 0; margin-bottom: 15px; }
     .modal-input {
-      width: 100%; background: rgba(0,0,0,0.3); padding: 12px; margin-bottom: 12px;
-      border-radius: 8px; border: 1px solid #334155; color: white; box-sizing: border-box;
-      font-family: inherit; font-size: 1rem;
+      width: 100%; background: rgba(0,0,0,0.3); padding: 12px; margin-bottom: 15px;
+      border-radius: 8px; border: 1px solid #334155; color: white; box-sizing: border-box; font-family: inherit; font-size: 1rem;
     }
-    /* Style for the select dropdown */
-    select.modal-input option { background: #1e1e30; color: white; }
+    .slider-group { margin-bottom: 15px; }
+    .slider-group label { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px; }
+    input[type="range"] { width: 100%; accent-color: var(--color-sys); }
     
-    .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
+    .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
     .btn-cancel { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; background-color: var(--btn-inactive); color: white; }
     .btn-save { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; background-color: var(--color-sys); color: #000; font-weight: bold; }
+    .btn-delete { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; background-color: var(--color-err); color: white; font-weight: bold; }
 
   </style>
 </head>
@@ -182,8 +151,9 @@
   <div class="header-area">
     <h2>ESP32 Console</h2>
     <div class="top-controls">
-      <button class="ctrl-btn" id="connectBtn">Connect</button>
-      <button class="ctrl-btn" id="disconnectBtn" disabled>Disconnect</button>
+      <button class="ctrl-btn" id="connectBtn">🔌 Pair New</button>
+      <button class="ctrl-btn" id="reconnectBtn">⚡ Reconnect</button>
+      <button class="ctrl-btn" id="disconnectBtn" disabled>❌ Disconnect</button>
       <button class="ctrl-btn" id="toggleMacrosBtn">📋 Macros</button>
     </div>
   </div>
@@ -193,7 +163,6 @@
       <button id="addMacroBtn" class="add-macro-btn">➕ Create New Macro</button>
       <div id="macro-list" class="macro-grid"></div>
     </div>
-
     <div id="terminal-container">
       <div class="log-line" style="color: var(--text-muted)">Ready to connect...</div>
     </div>
@@ -208,16 +177,23 @@
 
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
-      <h3>New Custom Button</h3>
-      <input type="text" id="newMacroName" class="modal-input" placeholder="Button Name (e.g., OPEN)">
-      <input type="text" id="newMacroCmd" class="modal-input" placeholder="Command (e.g., G_OPEN)">
-      <select id="newMacroSize" class="modal-input">
-        <option value="1">Normal Block (1x)</option>
-        <option value="2">Wide Block (2x)</option>
-        <option value="full">Full Width Banner</option>
-      </select>
+      <h3 id="modalTitle">New Custom Button</h3>
+      <input type="text" id="macroName" class="modal-input" placeholder="Button Name (e.g., OPEN)">
+      <input type="text" id="macroCmd" class="modal-input" placeholder="Command (e.g., G_OPEN)">
+      
+      <div class="slider-group">
+        <label><span>Width:</span> <span id="widthVal">2</span></label>
+        <input type="range" id="macroWidth" min="1" max="4" value="2">
+      </div>
+      
+      <div class="slider-group">
+        <label><span>Height:</span> <span id="heightVal">1</span></label>
+        <input type="range" id="macroHeight" min="1" max="4" value="1">
+      </div>
+
       <div class="modal-btns">
         <button class="btn-cancel" id="cancelMacroBtn">Cancel</button>
+        <button class="btn-delete" id="deleteMacroBtn" style="display: none;">Delete</button>
         <button class="btn-save" id="saveMacroBtn">Save</button>
       </div>
     </div>
@@ -232,85 +208,136 @@
     const terminal = document.getElementById('terminal-container');
     const inputField = document.getElementById('inputCmd');
 
-    // --- MACRO PAGE TOGGLE ---
+    // --- MACRO PAGE & STORAGE ---
     const toggleBtn = document.getElementById('toggleMacrosBtn');
     toggleBtn.addEventListener('click', () => {
       document.body.classList.toggle('show-macros');
       toggleBtn.classList.toggle('active');
       if (document.body.classList.contains('show-macros')) {
-        toggleBtn.textContent = '⌨️ Terminal';
+        toggleBtn.innerHTML = '⌨️ Terminal';
       } else {
-        toggleBtn.textContent = '📋 Macros';
+        toggleBtn.innerHTML = '📋 Macros';
         terminal.scrollTop = terminal.scrollHeight; 
       }
     });
 
-    // --- MACRO SYSTEM LOGIC (Local Storage + Grid Sizes) ---
-    // Load macros from local storage, default to empty array if none exist
     let macros = JSON.parse(localStorage.getItem('esp32_macros')) || [];
+    let editingIndex = -1; // -1 means creating new, otherwise it's the index being edited
 
     function renderMacros() {
       const list = document.getElementById('macro-list');
       list.innerHTML = ''; 
       macros.forEach((macro, index) => {
         const btn = document.createElement('button');
-        // Apply the base class AND the specific size class (default to size-1 if missing)
-        const btnSize = macro.size || '1';
-        btn.className = `custom-macro size-${btnSize}`;
+        btn.className = 'custom-macro';
+        
+        // Apply Freeform Grid Span
+        const w = macro.w || 2;
+        const h = macro.h || 1;
+        btn.style.gridColumn = `span ${w}`;
+        btn.style.gridRow = `span ${h}`;
+        
         btn.textContent = macro.name;
         
+        // Short Click = Send Command
         btn.onclick = () => sendCommandString(macro.cmd);
         
-        // Long press to delete
+        // Long Press = Open Edit Menu
         let pressTimer;
-        btn.onmousedown = btn.ontouchstart = () => {
+        let isLongPress = false;
+        
+        const startPress = (e) => {
+          isLongPress = false;
           pressTimer = window.setTimeout(() => {
-            if(confirm(`Delete button "${macro.name}"?`)) {
-              macros.splice(index, 1);
-              saveMacros(); // Saves to local storage instantly
-            }
-          }, 800);
+            isLongPress = true;
+            openEditModal(index); // Opens the slider UI
+          }, 600); // 600ms hold to edit
         };
-        btn.onmouseup = btn.ontouchend = () => clearTimeout(pressTimer);
+        
+        const cancelPress = (e) => {
+          clearTimeout(pressTimer);
+          // If it was a long press, prevent the click event from firing the command
+          if (isLongPress) { e.preventDefault(); e.stopPropagation(); }
+        };
+
+        btn.addEventListener('mousedown', startPress);
+        btn.addEventListener('touchstart', startPress, {passive: true});
+        btn.addEventListener('mouseup', cancelPress);
+        btn.addEventListener('mouseleave', cancelPress);
+        btn.addEventListener('touchend', cancelPress);
         
         list.appendChild(btn);
       });
     }
 
-    function saveMacros() {
-      // Save straight into browser's local storage
-      localStorage.setItem('esp32_macros', JSON.stringify(macros));
-      renderMacros();
+    // --- MODAL LOGIC (Add & Edit) ---
+    const overlay = document.getElementById('modalOverlay');
+    const wSlider = document.getElementById('macroWidth');
+    const hSlider = document.getElementById('macroHeight');
+    
+    // Update slider numbers visually
+    wSlider.oninput = () => document.getElementById('widthVal').textContent = wSlider.value;
+    hSlider.oninput = () => document.getElementById('heightVal').textContent = hSlider.value;
+
+    document.getElementById('addMacroBtn').addEventListener('click', () => {
+      editingIndex = -1;
+      document.getElementById('modalTitle').textContent = 'New Button';
+      document.getElementById('macroName').value = '';
+      document.getElementById('macroCmd').value = '';
+      wSlider.value = 2; hSlider.value = 1;
+      wSlider.dispatchEvent(new Event('input')); hSlider.dispatchEvent(new Event('input'));
+      document.getElementById('deleteMacroBtn').style.display = 'none'; // Hide delete
+      overlay.style.display = 'flex';
+    });
+
+    function openEditModal(index) {
+      editingIndex = index;
+      const m = macros[index];
+      document.getElementById('modalTitle').textContent = 'Edit Button';
+      document.getElementById('macroName').value = m.name;
+      document.getElementById('macroCmd').value = m.cmd;
+      wSlider.value = m.w || 2;
+      hSlider.value = m.h || 1;
+      wSlider.dispatchEvent(new Event('input')); hSlider.dispatchEvent(new Event('input'));
+      document.getElementById('deleteMacroBtn').style.display = 'block'; // Show delete
+      overlay.style.display = 'flex';
     }
 
-    // Modal Logic
-    const overlay = document.getElementById('modalOverlay');
-    document.getElementById('addMacroBtn').addEventListener('click', () => overlay.style.display = 'flex');
     document.getElementById('cancelMacroBtn').addEventListener('click', () => overlay.style.display = 'none');
     
+    document.getElementById('deleteMacroBtn').addEventListener('click', () => {
+      if (editingIndex > -1) {
+        macros.splice(editingIndex, 1);
+        localStorage.setItem('esp32_macros', JSON.stringify(macros));
+        renderMacros();
+        overlay.style.display = 'none';
+      }
+    });
+
     document.getElementById('saveMacroBtn').addEventListener('click', () => {
-      const name = document.getElementById('newMacroName').value.trim();
-      const cmd = document.getElementById('newMacroCmd').value.trim();
-      const size = document.getElementById('newMacroSize').value;
+      const name = document.getElementById('macroName').value.trim();
+      const cmd = document.getElementById('macroCmd').value.trim();
+      const w = parseInt(wSlider.value);
+      const h = parseInt(hSlider.value);
       
       if (name && cmd) {
-        macros.push({ name, cmd, size });
-        saveMacros();
-        
-        // Reset modal inputs
-        document.getElementById('newMacroName').value = '';
-        document.getElementById('newMacroCmd').value = '';
-        document.getElementById('newMacroSize').value = '1';
+        const macroData = { name, cmd, w, h };
+        if (editingIndex === -1) {
+          macros.push(macroData); // Add new
+        } else {
+          macros[editingIndex] = macroData; // Update existing
+        }
+        localStorage.setItem('esp32_macros', JSON.stringify(macros));
+        renderMacros();
         overlay.style.display = 'none';
       } else {
         alert("Please fill in both the Name and Command!");
       }
     });
 
-    // Initial render on page load
     renderMacros();
 
-    // --- TERMINAL LOGIC ---
+    // --- BLUETOOTH CORE LOGIC ---
     function getTimeStamp() {
       const now = new Date();
       return `[${now.toLocaleTimeString('en-US', { hour12: false })}]`;
@@ -328,43 +355,57 @@
       terminal.scrollTop = terminal.scrollHeight; 
     }
 
+    async function establishGattConnection(device) {
+      device.addEventListener('gattserverdisconnected', () => {
+        log('Disconnected.', 'err');
+        toggleUI(false);
+      });
+
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService(serviceUuid);
+      
+      const txCharacteristic = await service.getCharacteristic(txCharacteristicUuid);
+      await txCharacteristic.startNotifications();
+      txCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+        const decoder = new TextDecoder('utf-8');
+        const value = decoder.decode(event.target.value).trim(); 
+        if (value) log(value, 'rx');
+      });
+
+      rxCharacteristic = await service.getCharacteristic(rxCharacteristicUuid);
+      terminal.innerHTML = ''; 
+      log(`Connected to ${device.name || 'ESP32'}`, 'sys');
+      toggleUI(true);
+    }
+
     document.getElementById('connectBtn').addEventListener('click', async () => {
       try {
         log('Scanning all nearby devices...', 'sys');
         bleDevice = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: [serviceUuid] 
+          acceptAllDevices: true, optionalServices: [serviceUuid] 
         });
-
-        bleDevice.addEventListener('gattserverdisconnected', () => {
-          log('Disconnected.', 'err');
-          toggleUI(false);
-        });
-
-        const server = await bleDevice.gatt.connect();
-        const service = await server.getPrimaryService(serviceUuid);
-        
-        const txCharacteristic = await service.getCharacteristic(txCharacteristicUuid);
-        await txCharacteristic.startNotifications();
-        txCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
-          const decoder = new TextDecoder('utf-8');
-          const value = decoder.decode(event.target.value).trim(); 
-          if (value) log(value, 'rx');
-        });
-
-        rxCharacteristic = await service.getCharacteristic(rxCharacteristicUuid);
-
-        terminal.innerHTML = ''; 
-        log('Active.', 'sys');
-        toggleUI(true);
-
+        await establishGattConnection(bleDevice);
       } catch (error) {
-        if (!error.toString().includes('User cancelled')) {
-          log('Error: ' + error, 'err');
-        } else {
-          log('Connection cancelled.', 'sys');
-        }
+        if (!error.toString().includes('User cancelled')) { log('Error: ' + error, 'err'); } 
+        else { log('Connection cancelled.', 'sys'); }
       }
+    });
+
+    document.getElementById('reconnectBtn').addEventListener('click', async () => {
+      try {
+        if (!navigator.bluetooth || !navigator.bluetooth.getDevices) {
+          log('Fast Reconnect not supported on this browser. Use Pair New.', 'err'); return;
+        }
+        log('Checking saved devices...', 'sys');
+        const devices = await navigator.bluetooth.getDevices();
+        if (devices.length > 0) {
+          bleDevice = devices[devices.length - 1];
+          log(`Attempting fast reconnect to ${bleDevice.name || 'device'}...`, 'sys');
+          await establishGattConnection(bleDevice);
+        } else {
+          log('No previously paired devices found. Please use "Pair New" first.', 'err');
+        }
+      } catch (error) { log('Reconnect Error: Make sure ESP32 is on and in range.', 'err'); }
     });
 
     async function sendCommandString(cmdStr) {
@@ -373,18 +414,12 @@
         const encoder = new TextEncoder('utf-8');
         await rxCharacteristic.writeValue(encoder.encode(cmdStr + '\n'));
         log(cmdStr, 'tx');
-      } catch (error) {
-        log('Send Error: ' + error, 'err');
-      }
+      } catch (error) { log('Send Error: ' + error, 'err'); }
     }
 
     document.getElementById('sendBtn').addEventListener('click', () => {
       const cmd = inputField.value.trim();
-      if(cmd) {
-        sendCommandString(cmd);
-        inputField.value = ''; 
-        inputField.focus();
-      }
+      if(cmd) { sendCommandString(cmd); inputField.value = ''; inputField.focus(); }
     });
 
     inputField.addEventListener('keypress', (e) => {
@@ -397,6 +432,7 @@
 
     function toggleUI(connected) {
       document.getElementById('connectBtn').disabled = connected;
+      document.getElementById('reconnectBtn').disabled = connected;
       document.getElementById('disconnectBtn').disabled = !connected;
       inputField.disabled = !connected;
       document.getElementById('sendBtn').disabled = !connected;
