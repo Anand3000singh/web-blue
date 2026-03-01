@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ESP32 Web BLE Terminal</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 20px auto; padding: 10px; }
+    #terminal { height: 300px; width: 100%; border: 1px solid #333; overflow-y: auto; margin-bottom: 15px; padding: 10px; background: #1e1e1e; color: #00ff00; font-family: monospace; border-radius: 5px; box-sizing: border-box; }
+    .controls { display: flex; gap: 10px; }
+    input[type="text"] { flex-grow: 1; padding: 10px; font-family: monospace; }
+    button { padding: 10px 15px; cursor: pointer; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <h2>ESP32 Web Terminal</h2>
+  <div style="margin-bottom: 10px;">
+    <button id="connectBtn">Connect to ESP32</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+  </div>
+
+  <div id="terminal"></div>
+
+  <div class="controls">
+    <input type="text" id="inputCmd" placeholder="Enter terminal command..." disabled>
+    <button id="sendBtn" disabled>Send</button>
+  </div>
+
+  <script>
+    // Standard Nordic UART Service (NUS) UUIDs used by ESP32 BLE
+    const serviceUuid = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+    const rxCharacteristicUuid = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Writing to ESP32
+    const txCharacteristicUuid = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Reading from ESP32
+
+    let bleDevice, rxCharacteristic;
+    const terminal = document.getElementById('terminal');
+
+    // Helper to print to our on-screen terminal
+    function log(text, color = '#fff') {
+      terminal.innerHTML += `<div style="color: ${color}">${text}</div>`;
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    document.getElementById('connectBtn').addEventListener('click', async () => {
+      try {
+        log('Scanning for ESP32...', '#aaa');
+        bleDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [serviceUuid] }]
+        });
+
+        bleDevice.addEventListener('gattserverdisconnected', () => {
+          log('ESP32 Disconnected.', '#ff5555');
+          toggleUI(false);
+        });
+
+        log('Connecting to GATT Server...', '#aaa');
+        const server = await bleDevice.gatt.connect();
+
+        log('Locating UART Service...', '#aaa');
+        const service = await server.getPrimaryService(serviceUuid);
+
+        log('Subscribing to ESP32 Output (TX)...', '#aaa');
+        const txCharacteristic = await service.getCharacteristic(txCharacteristicUuid);
+        await txCharacteristic.startNotifications();
+        
+        // Listen for incoming terminal data from the ESP32
+        txCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+          const decoder = new TextDecoder('utf-8');
+          log('ESP32> ' + decoder.decode(event.target.value), '#00ff00');
+        });
+
+        log('Grabbing Input Channel (RX)...', '#aaa');
+        rxCharacteristic = await service.getCharacteristic(rxCharacteristicUuid);
+
+        log('Connection Established! Ready to send commands.', '#55ff55');
+        toggleUI(true);
+
+      } catch (error) {
+        log('Connection Error: ' + error, '#ff5555');
+      }
+    });
+
+    // Send data to the ESP32
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+      const input = document.getElementById('inputCmd');
+      const command = input.value + '\n'; // Add newline just like a real serial monitor
+      
+      if (!rxCharacteristic || !input.value) return;
+
+      try {
+        const encoder = new TextEncoder('utf-8');
+        await rxCharacteristic.writeValue(encoder.encode(command));
+        log('You> ' + input.value, '#55aaff');
+        input.value = ''; // Clear input field
+      } catch (error) {
+        log('Send Error: ' + error, '#ff5555');
+      }
+    });
+
+    document.getElementById('disconnectBtn').addEventListener('click', () => {
+      if (bleDevice && bleDevice.gatt.connected) {
+        bleDevice.gatt.disconnect();
+      }
+    });
+
+    // Enable/Disable buttons based on connection state
+    function toggleUI(connected) {
+      document.getElementById('connectBtn').disabled = connected;
+      document.getElementById('disconnectBtn').disabled = !connected;
+      document.getElementById('inputCmd').disabled = !connected;
+      document.getElementById('sendBtn').disabled = !connected;
+    }
+  </script>
+</body>
+</html>
