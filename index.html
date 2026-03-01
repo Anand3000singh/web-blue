@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
   <title>ESP32 Console</title>
   <style>
     :root {
       --bg-gradient-top: #2a2a4a;
       --bg-gradient-bottom: #121226;
-      --panel-bg: rgba(30, 30, 48, 0.85); /* Slightly transparent for the floating pebble */
+      --panel-bg: rgba(30, 30, 48, 0.85);
       --term-bg: #0f111a;
       --text-main: #e2e8f0;
       --text-muted: #64748b;
@@ -18,131 +18,209 @@
       --color-err: #f87171; 
       --btn-active: #6366f1; 
       --btn-inactive: #334155;
+      --btn-macro: #4f46e5;
     }
 
     body {
       font-family: system-ui, -apple-system, sans-serif;
       margin: 0;
-      padding: 15px;
-      height: 100vh;
-      box-sizing: border-box;
+      height: 100dvh; 
       background: linear-gradient(180deg, var(--bg-gradient-top) 0%, var(--bg-gradient-bottom) 100%);
       color: var(--text-main);
       display: flex;
       flex-direction: column;
-      position: relative; /* Needed for the floating pebble */
+      overflow: hidden;
     }
 
-    h2 {
-      margin: 0 0 15px 0;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #ffffff;
+    /* --- TOP HEADER --- */
+    .header-area {
+      padding: 15px 15px 0 15px;
+      flex-shrink: 0;
     }
 
-    .top-controls {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
+    h2 { margin: 0 0 15px 0; font-size: 1.5rem; font-weight: 700; color: #ffffff; }
+
+    .top-controls { display: flex; gap: 10px; }
+    
+    button.ctrl-btn {
+      flex: 1; padding: 12px; border: none; border-radius: 8px;
+      font-weight: 600; font-size: 0.95rem; cursor: pointer; color: #ffffff;
+      transition: all 0.2s ease;
     }
     
-    button {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      color: #ffffff;
-    }
-    
-    #connectBtn, #disconnectBtn { background-color: var(--btn-inactive); }
-    #disconnectBtn:not([disabled]) { background-color: var(--btn-active); }
+    #connectBtn, #disconnectBtn, #toggleMacrosBtn { background-color: var(--btn-inactive); }
+    #disconnectBtn:not([disabled]) { background-color: var(--color-err); }
+    #toggleMacrosBtn.active { background-color: var(--btn-active); }
     button[disabled] { opacity: 0.5; cursor: not-allowed; }
 
+    /* --- MAIN CONTENT AREA --- */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0; 
+      padding: 15px;
+      gap: 15px;
+    }
+
+    /* --- MACRO PAGE (Top 80% when active) --- */
+    #macro-page {
+      display: none; 
+      background-color: var(--panel-bg);
+      border-radius: 12px;
+      padding: 15px;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* ADVANCED GRID SYSTEM */
+    .macro-grid {
+      display: grid;
+      /* Base column width is around 100px, stretches to fill */
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      /* Dense packs items nicely even if mixing big and small buttons */
+      grid-auto-flow: dense; 
+      gap: 12px;
+      margin-top: 15px;
+    }
+
+    .add-macro-btn {
+      width: 100%; background-color: rgba(255, 255, 255, 0.1);
+      border: 1px dashed var(--text-muted); color: var(--text-main);
+      padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;
+      margin-bottom: 5px;
+    }
+
+    .custom-macro { 
+      background-color: var(--btn-macro); padding: 15px 12px; font-size: 1rem; font-weight: bold;
+      border-radius: 10px; border: none; color: white; cursor: pointer;
+      word-wrap: break-word; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: transform 0.1s;
+    }
+    .custom-macro:active { transform: scale(0.95); }
+
+    /* GRID SIZES */
+    .size-1 { grid-column: span 1; }
+    .size-2 { grid-column: span 2; }
+    .size-full { grid-column: 1 / -1; } /* Spans entire row */
+
+    /* --- TERMINAL AREA --- */
     #terminal-container {
-      flex-grow: 1;
+      flex: 1; 
       background-color: var(--term-bg);
       border-radius: 12px;
       padding: 15px;
-      /* Add extra padding at the bottom so text doesn't hide behind the floating pebble */
-      padding-bottom: 80px; 
       overflow-y: auto;
-      margin-bottom: 0; 
       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
       font-family: 'Courier New', Courier, monospace;
       font-size: 0.9rem;
       line-height: 1.5;
     }
 
-    #terminal-container::-webkit-scrollbar { width: 14px; }
-    #terminal-container::-webkit-scrollbar-track { background: transparent; margin: 10px 0; }
-    #terminal-container::-webkit-scrollbar-thumb {
-      background-color: #334155;
-      border-radius: 10px;
-      border: 4px solid var(--term-bg); 
-    }
-
+    #terminal-container::-webkit-scrollbar { width: 10px; }
+    #terminal-container::-webkit-scrollbar-track { background: transparent; }
+    #terminal-container::-webkit-scrollbar-thumb { background-color: #334155; border-radius: 10px; }
     .log-line { word-wrap: break-word; margin-bottom: 4px; }
 
-    /* --- THE FLOATING PEBBLE --- */
+    /* --- VIEW TOGGLE LOGIC --- */
+    body.show-macros #macro-page { display: block; flex: 4; }
+    body.show-macros #terminal-container { flex: 1; }
+    body.show-macros .pebble-wrapper { display: none; }
+
+    /* --- THE PEBBLE INPUT --- */
+    .pebble-wrapper { padding: 0 15px 15px 15px; flex-shrink: 0; }
+
     .input-area {
-      position: fixed; /* Pins it to the screen */
-      bottom: 20px; /* 20px from the bottom */
-      left: 50%;
-      transform: translateX(-50%); /* Centers it perfectly */
-      width: calc(100% - 40px); /* Adjusts to screen width minus margins */
-      max-width: 600px;
-      display: flex;
-      background-color: var(--panel-bg);
-      backdrop-filter: blur(10px); /* Gives it a modern frosted glass look */
-      border-radius: 30px; /* Heavy rounding for the pebble look */
-      padding: 6px 6px 6px 20px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.6); /* Heavy drop shadow to make it float */
-      z-index: 100;
+      display: flex; background-color: var(--panel-bg);
+      backdrop-filter: blur(10px); border-radius: 30px;
+      padding: 6px 6px 6px 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.4);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     input[type="text"] {
-      flex-grow: 1;
-      background: transparent;
-      border: none;
-      color: var(--text-main);
-      font-family: monospace;
-      font-size: 1rem;
-      outline: none;
-      padding-right: 10px;
+      flex-grow: 1; background: transparent; border: none;
+      color: var(--text-main); font-family: monospace; font-size: 1rem;
+      outline: none; padding-right: 10px;
     }
-    
     input[type="text"]::placeholder { color: var(--text-muted); }
 
     #sendBtn {
-      flex: 0 0 auto;
-      background-color: var(--btn-active);
-      padding: 12px 24px;
-      border-radius: 25px; /* Round the button to match the pebble */
+      flex: 0 0 auto; background-color: var(--btn-active);
+      padding: 12px 24px; border-radius: 25px; border: none; color: white;
+      font-weight: bold; cursor: pointer;
     }
     #sendBtn[disabled] { background-color: var(--btn-inactive); opacity: 0.5; }
+
+    /* --- MODAL --- */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+      z-index: 200; justify-content: center; align-items: center;
+    }
+    .modal {
+      background: var(--panel-bg); padding: 20px; border-radius: 15px;
+      width: 80%; max-width: 300px; border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    .modal h3 { margin-top: 0; margin-bottom: 15px; }
+    .modal-input {
+      width: 100%; background: rgba(0,0,0,0.3); padding: 12px; margin-bottom: 12px;
+      border-radius: 8px; border: 1px solid #334155; color: white; box-sizing: border-box;
+      font-family: inherit; font-size: 1rem;
+    }
+    /* Style for the select dropdown */
+    select.modal-input option { background: #1e1e30; color: white; }
+    
+    .modal-btns { display: flex; gap: 10px; margin-top: 10px; }
+    .btn-cancel { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; background-color: var(--btn-inactive); color: white; }
+    .btn-save { flex: 1; padding: 12px; border-radius: 8px; border: none; cursor: pointer; background-color: var(--color-sys); color: #000; font-weight: bold; }
 
   </style>
 </head>
 <body>
 
-  <h2>ESP32 Console</h2>
-  
-  <div class="top-controls">
-    <button id="connectBtn">Connect</button>
-    <button id="disconnectBtn" disabled>Disconnect</button>
+  <div class="header-area">
+    <h2>ESP32 Console</h2>
+    <div class="top-controls">
+      <button class="ctrl-btn" id="connectBtn">Connect</button>
+      <button class="ctrl-btn" id="disconnectBtn" disabled>Disconnect</button>
+      <button class="ctrl-btn" id="toggleMacrosBtn">📋 Macros</button>
+    </div>
   </div>
 
-  <div id="terminal-container">
-    <div class="log-line" style="color: var(--text-muted)">Ready to connect...</div>
+  <div class="main-area">
+    <div id="macro-page">
+      <button id="addMacroBtn" class="add-macro-btn">➕ Create New Macro</button>
+      <div id="macro-list" class="macro-grid"></div>
+    </div>
+
+    <div id="terminal-container">
+      <div class="log-line" style="color: var(--text-muted)">Ready to connect...</div>
+    </div>
   </div>
 
-  <div class="input-area">
-    <input type="text" id="inputCmd" placeholder="> Enter command..." disabled autocomplete="off">
-    <button id="sendBtn" disabled>Send</button>
+  <div class="pebble-wrapper">
+    <div class="input-area">
+      <input type="text" id="inputCmd" placeholder="> Enter command..." disabled autocomplete="off">
+      <button id="sendBtn" disabled>Send</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3>New Custom Button</h3>
+      <input type="text" id="newMacroName" class="modal-input" placeholder="Button Name (e.g., OPEN)">
+      <input type="text" id="newMacroCmd" class="modal-input" placeholder="Command (e.g., G_OPEN)">
+      <select id="newMacroSize" class="modal-input">
+        <option value="1">Normal Block (1x)</option>
+        <option value="2">Wide Block (2x)</option>
+        <option value="full">Full Width Banner</option>
+      </select>
+      <div class="modal-btns">
+        <button class="btn-cancel" id="cancelMacroBtn">Cancel</button>
+        <button class="btn-save" id="saveMacroBtn">Save</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -154,6 +232,85 @@
     const terminal = document.getElementById('terminal-container');
     const inputField = document.getElementById('inputCmd');
 
+    // --- MACRO PAGE TOGGLE ---
+    const toggleBtn = document.getElementById('toggleMacrosBtn');
+    toggleBtn.addEventListener('click', () => {
+      document.body.classList.toggle('show-macros');
+      toggleBtn.classList.toggle('active');
+      if (document.body.classList.contains('show-macros')) {
+        toggleBtn.textContent = '⌨️ Terminal';
+      } else {
+        toggleBtn.textContent = '📋 Macros';
+        terminal.scrollTop = terminal.scrollHeight; 
+      }
+    });
+
+    // --- MACRO SYSTEM LOGIC (Local Storage + Grid Sizes) ---
+    // Load macros from local storage, default to empty array if none exist
+    let macros = JSON.parse(localStorage.getItem('esp32_macros')) || [];
+
+    function renderMacros() {
+      const list = document.getElementById('macro-list');
+      list.innerHTML = ''; 
+      macros.forEach((macro, index) => {
+        const btn = document.createElement('button');
+        // Apply the base class AND the specific size class (default to size-1 if missing)
+        const btnSize = macro.size || '1';
+        btn.className = `custom-macro size-${btnSize}`;
+        btn.textContent = macro.name;
+        
+        btn.onclick = () => sendCommandString(macro.cmd);
+        
+        // Long press to delete
+        let pressTimer;
+        btn.onmousedown = btn.ontouchstart = () => {
+          pressTimer = window.setTimeout(() => {
+            if(confirm(`Delete button "${macro.name}"?`)) {
+              macros.splice(index, 1);
+              saveMacros(); // Saves to local storage instantly
+            }
+          }, 800);
+        };
+        btn.onmouseup = btn.ontouchend = () => clearTimeout(pressTimer);
+        
+        list.appendChild(btn);
+      });
+    }
+
+    function saveMacros() {
+      // Save straight into browser's local storage
+      localStorage.setItem('esp32_macros', JSON.stringify(macros));
+      renderMacros();
+    }
+
+    // Modal Logic
+    const overlay = document.getElementById('modalOverlay');
+    document.getElementById('addMacroBtn').addEventListener('click', () => overlay.style.display = 'flex');
+    document.getElementById('cancelMacroBtn').addEventListener('click', () => overlay.style.display = 'none');
+    
+    document.getElementById('saveMacroBtn').addEventListener('click', () => {
+      const name = document.getElementById('newMacroName').value.trim();
+      const cmd = document.getElementById('newMacroCmd').value.trim();
+      const size = document.getElementById('newMacroSize').value;
+      
+      if (name && cmd) {
+        macros.push({ name, cmd, size });
+        saveMacros();
+        
+        // Reset modal inputs
+        document.getElementById('newMacroName').value = '';
+        document.getElementById('newMacroCmd').value = '';
+        document.getElementById('newMacroSize').value = '1';
+        overlay.style.display = 'none';
+      } else {
+        alert("Please fill in both the Name and Command!");
+      }
+    });
+
+    // Initial render on page load
+    renderMacros();
+
+    // --- TERMINAL LOGIC ---
     function getTimeStamp() {
       const now = new Date();
       return `[${now.toLocaleTimeString('en-US', { hour12: false })}]`;
@@ -162,16 +319,9 @@
     function log(text, type = 'sys') {
       let color = 'var(--color-sys)'; 
       let prefix = '';
-      
       if (type === 'err') color = 'var(--color-err)';
-      if (type === 'tx') {
-        color = 'var(--color-tx)';
-        prefix = `${getTimeStamp()} TX: `;
-      }
-      if (type === 'rx') {
-        color = 'var(--color-rx)';
-        prefix = `${getTimeStamp()} RX: `;
-      }
+      if (type === 'tx') { color = 'var(--color-tx)'; prefix = `${getTimeStamp()} TX: `; }
+      if (type === 'rx') { color = 'var(--color-rx)'; prefix = `${getTimeStamp()} RX: `; }
 
       const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
       terminal.innerHTML += `<div class="log-line" style="color: ${color}">${prefix}${safeText}</div>`;
@@ -181,8 +331,6 @@
     document.getElementById('connectBtn').addEventListener('click', async () => {
       try {
         log('Scanning all nearby devices...', 'sys');
-        
-        // FIX: Accept all devices so the list populates, but strictly request our service
         bleDevice = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
           optionalServices: [serviceUuid] 
@@ -209,7 +357,6 @@
         terminal.innerHTML = ''; 
         log('Active.', 'sys');
         toggleUI(true);
-        inputField.focus();
 
       } catch (error) {
         if (!error.toString().includes('User cancelled')) {
@@ -220,30 +367,32 @@
       }
     });
 
-    async function sendCommand() {
-      const command = inputField.value.trim();
-      if (!rxCharacteristic || !command) return;
-
+    async function sendCommandString(cmdStr) {
+      if (!rxCharacteristic || !cmdStr) return;
       try {
         const encoder = new TextEncoder('utf-8');
-        await rxCharacteristic.writeValue(encoder.encode(command + '\n'));
-        log(command, 'tx');
-        inputField.value = ''; 
+        await rxCharacteristic.writeValue(encoder.encode(cmdStr + '\n'));
+        log(cmdStr, 'tx');
       } catch (error) {
         log('Send Error: ' + error, 'err');
       }
     }
 
-    document.getElementById('sendBtn').addEventListener('click', sendCommand);
+    document.getElementById('sendBtn').addEventListener('click', () => {
+      const cmd = inputField.value.trim();
+      if(cmd) {
+        sendCommandString(cmd);
+        inputField.value = ''; 
+        inputField.focus();
+      }
+    });
 
     inputField.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendCommand();
+      if (e.key === 'Enter') document.getElementById('sendBtn').click();
     });
 
     document.getElementById('disconnectBtn').addEventListener('click', () => {
-      if (bleDevice && bleDevice.gatt.connected) {
-        bleDevice.gatt.disconnect();
-      }
+      if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
     });
 
     function toggleUI(connected) {
