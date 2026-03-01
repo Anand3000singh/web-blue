@@ -2,269 +2,250 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ESP32 Glass Terminal</title>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ESP32 Console</title>
   <style>
+    /* Global Theme Variables */
     :root {
-      --glass-bg: rgba(20, 25, 35, 0.4);
-      --glass-border: rgba(255, 255, 255, 0.08);
-      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-      --accent-color: #6366f1; /* Indigo accent */
-      --accent-hover: #818cf8;
+      --bg-gradient-top: #2a2a4a;
+      --bg-gradient-bottom: #121226;
+      --panel-bg: #1e1e30;
+      --term-bg: #0f111a;
       --text-main: #e2e8f0;
-      --text-muted: #94a3b8;
+      --text-muted: #64748b;
+      --color-tx: #c084fc; /* Purple */
+      --color-rx: #2dd4bf; /* Teal */
+      --color-sys: #4ade80; /* Green */
+      --color-err: #f87171; /* Red */
+      --btn-active: #6366f1; /* Bright Blue */
+      --btn-inactive: #334155;
     }
 
+    /* Reset & Full Screen Layout */
     body {
+      font-family: system-ui, -apple-system, sans-serif;
       margin: 0;
-      padding: 0;
-      min-height: 100vh;
-      font-family: 'JetBrains Mono', monospace;
+      padding: 15px;
+      height: 100vh;
+      box-sizing: border-box;
+      background: linear-gradient(180deg, var(--bg-gradient-top) 0%, var(--bg-gradient-bottom) 100%);
       color: var(--text-main);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      /* Animated deep gradient background to make the glass pop */
-      background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #020617);
-      background-size: 400% 400%;
-      animation: gradientBG 15s ease infinite;
-    }
-
-    @keyframes gradientBG {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-
-    .container {
-      width: 90%;
-      max-width: 800px;
-      padding: 24px;
-      /* The Glass Effect */
-      background: var(--glass-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      box-shadow: var(--glass-shadow);
       display: flex;
       flex-direction: column;
-      gap: 20px;
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
-
-    .header h2 {
-      margin: 0;
+    /* Header & Title */
+    h2 {
+      margin: 0 0 15px 0;
       font-size: 1.5rem;
       font-weight: 700;
-      letter-spacing: -0.5px;
+      letter-spacing: 0.5px;
+      color: #ffffff;
     }
 
-    .btn-group {
+    /* Top Controls */
+    .top-controls {
       display: flex;
       gap: 10px;
+      margin-bottom: 15px;
     }
-
+    
     button {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-      padding: 10px 18px;
-      border-radius: 10px;
-      border: 1px solid var(--glass-border);
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-main);
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
       cursor: pointer;
-      transition: all 0.2s ease;
-      backdrop-filter: blur(5px);
+      transition: background 0.2s, opacity 0.2s;
+      color: #ffffff;
     }
+    
+    #connectBtn { background-color: var(--btn-inactive); }
+    #connectBtn:not([disabled]) { background-color: var(--btn-inactive); }
+    #connectBtn[disabled] { opacity: 0.5; cursor: not-allowed; }
+    
+    #disconnectBtn { background-color: var(--btn-inactive); }
+    #disconnectBtn:not([disabled]) { background-color: var(--btn-active); }
+    #disconnectBtn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
-    button:hover:not(:disabled) {
-      background: var(--accent-color);
-      border-color: var(--accent-color);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    #terminal {
-      height: 400px;
-      width: 100%;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid var(--glass-border);
+    /* The Terminal Box (Flex-Grow makes it stretch) */
+    #terminal-container {
+      flex-grow: 1;
+      background-color: var(--term-bg);
       border-radius: 12px;
-      padding: 16px;
+      padding: 15px;
       overflow-y: auto;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      font-family: 'Courier New', Courier, monospace;
       font-size: 0.9rem;
       line-height: 1.5;
-      box-sizing: border-box;
-      box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
     }
 
     /* Custom Scrollbar for Terminal */
-    #terminal::-webkit-scrollbar { width: 8px; }
-    #terminal::-webkit-scrollbar-track { background: transparent; }
-    #terminal::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-    #terminal::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+    #terminal-container::-webkit-scrollbar { width: 14px; }
+    #terminal-container::-webkit-scrollbar-track {
+      background: transparent;
+      margin: 10px 0; /* Keeps scrollbar away from rounded corners */
+    }
+    #terminal-container::-webkit-scrollbar-thumb {
+      background-color: #334155;
+      border-radius: 10px;
+      border: 4px solid var(--term-bg); /* Matches terminal BG to act as padding */
+    }
 
+    .log-line { word-wrap: break-word; margin-bottom: 4px; }
+
+    /* Bottom Input Area */
     .input-area {
       display: flex;
-      gap: 12px;
+      background-color: var(--panel-bg);
+      border-radius: 10px;
+      padding: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
     input[type="text"] {
       flex-grow: 1;
-      font-family: 'JetBrains Mono', monospace;
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--glass-border);
+      background: transparent;
+      border: none;
+      padding: 12px 15px;
       color: var(--text-main);
-      padding: 12px 16px;
-      border-radius: 10px;
+      font-family: monospace;
       font-size: 1rem;
       outline: none;
-      transition: all 0.2s;
     }
-
-    input[type="text"]:focus {
-      border-color: var(--accent-color);
-      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-    }
-
-    input[type="text"]:disabled {
-      opacity: 0.4;
-    }
+    
+    input[type="text"]::placeholder { color: var(--text-muted); }
+    input[type="text"]:disabled { opacity: 0.5; }
 
     #sendBtn {
-      background: var(--accent-color);
-      border-color: var(--accent-color);
-      padding: 12px 24px;
+      flex: 0 0 auto;
+      background-color: var(--btn-active);
+      padding: 10px 20px;
+      border-radius: 8px;
     }
+    #sendBtn[disabled] { background-color: var(--btn-inactive); opacity: 0.5; }
 
-    #sendBtn:hover:not(:disabled) {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
-    }
-
-    /* Terminal text colors */
-    .log-sys { color: var(--text-muted); }
-    .log-err { color: #f87171; }
-    .log-succ { color: #4ade80; }
-    .log-rx { color: #2dd4bf; }
-    .log-tx { color: #c084fc; }
-
-    @media (max-width: 600px) {
-      .container { width: 95%; padding: 16px; }
-      #terminal { height: 300px; }
-      .header { flex-direction: column; align-items: flex-start; }
-      .btn-group { width: 100%; }
-      .btn-group button { flex-grow: 1; }
-    }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <div class="header">
-      <h2>ESP32 Console</h2>
-      <div class="btn-group">
-        <button id="connectBtn">Connect</button>
-        <button id="disconnectBtn" disabled>Disconnect</button>
-      </div>
-    </div>
+  <h2>ESP32 Console</h2>
+  
+  <div class="top-controls">
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+  </div>
 
-    <div id="terminal">
-      <div class="log-sys">Waiting for connection...</div>
-    </div>
+  <div id="terminal-container">
+    <div class="log-line" style="color: var(--text-muted)">Ready to connect...</div>
+  </div>
 
-    <div class="input-area">
-      <input type="text" id="inputCmd" placeholder="> Enter command..." disabled autocomplete="off">
-      <button id="sendBtn" disabled>Send</button>
-    </div>
+  <div class="input-area">
+    <input type="text" id="inputCmd" placeholder="> Enter command..." disabled autocomplete="off">
+    <button id="sendBtn" disabled>Send</button>
   </div>
 
   <script>
     const serviceUuid = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-    const rxCharacteristicUuid = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; 
-    const txCharacteristicUuid = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; 
+    const rxCharacteristicUuid = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // TX from web to ESP32
+    const txCharacteristicUuid = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // RX from ESP32 to web
 
     let bleDevice, rxCharacteristic;
-    const terminal = document.getElementById('terminal');
-    const inputCmd = document.getElementById('inputCmd');
+    const terminal = document.getElementById('terminal-container');
+    const inputField = document.getElementById('inputCmd');
 
-    // Enhanced logging system with specific CSS classes
+    // Helper to get formatted time [HH:MM:SS]
+    function getTimeStamp() {
+      const now = new Date();
+      return `[${now.toLocaleTimeString('en-US', { hour12: false })}]`;
+    }
+
+    // Advanced logging to handle colors and tags based on your screenshot
     function log(text, type = 'sys') {
-      const time = new Date().toLocaleTimeString([], { hour12: false });
-      terminal.innerHTML += `<div class="log-${type}">[${time}] ${text}</div>`;
-      terminal.scrollTop = terminal.scrollHeight;
+      let color = 'var(--color-sys)'; // Default green for system
+      let prefix = '';
+      
+      if (type === 'err') color = 'var(--color-err)';
+      if (type === 'tx') {
+        color = 'var(--color-tx)';
+        prefix = `${getTimeStamp()} TX: `;
+      }
+      if (type === 'rx') {
+        color = 'var(--color-rx)';
+        prefix = `${getTimeStamp()} RX: `;
+      }
+
+      const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;"); // Basic sanitization
+      terminal.innerHTML += `<div class="log-line" style="color: ${color}">${prefix}${safeText}</div>`;
+      terminal.scrollTop = terminal.scrollHeight; // Auto-scroll to bottom
     }
 
     document.getElementById('connectBtn').addEventListener('click', async () => {
       try {
-        log('Scanning nearby Bluetooth devices...', 'sys');
-        
+        log('Scanning...', 'sys');
         bleDevice = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: [serviceUuid] 
+          filters: [{ services: [serviceUuid] }]
         });
 
         bleDevice.addEventListener('gattserverdisconnected', () => {
-          log('Connection lost.', 'err');
+          log('Disconnected.', 'err');
           toggleUI(false);
         });
 
-        log(`Connecting to ${bleDevice.name || 'Device'}...`, 'sys');
         const server = await bleDevice.gatt.connect();
-
         const service = await server.getPrimaryService(serviceUuid);
-
+        
+        // Setup receiving data (RX)
         const txCharacteristic = await service.getCharacteristic(txCharacteristicUuid);
         await txCharacteristic.startNotifications();
-        
         txCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
           const decoder = new TextDecoder('utf-8');
-          log('RX: ' + decoder.decode(event.target.value).trim(), 'rx');
+          const value = decoder.decode(event.target.value).trim(); // trim removes extra newlines
+          if (value) log(value, 'rx');
         });
 
+        // Setup sending data (TX)
         rxCharacteristic = await service.getCharacteristic(rxCharacteristicUuid);
 
-        log('Link Established. Terminal Active.', 'succ');
+        terminal.innerHTML = ''; // Clear terminal on fresh connection
+        log('Active.', 'sys');
         toggleUI(true);
-        inputCmd.focus();
+        inputField.focus();
 
       } catch (error) {
-        log('Error: ' + error.message, 'err');
+        // Don't show an error if the user simply cancelled the pairing menu
+        if (!error.toString().includes('User cancelled')) {
+          log('Error: ' + error, 'err');
+        } else {
+          log('Connection cancelled.', 'sys');
+        }
       }
     });
 
     async function sendCommand() {
-      const command = inputCmd.value;
+      const command = inputField.value.trim();
       if (!rxCharacteristic || !command) return;
 
       try {
         const encoder = new TextEncoder('utf-8');
+        // Sending command with newline character
         await rxCharacteristic.writeValue(encoder.encode(command + '\n'));
-        log('TX: ' + command, 'tx');
-        inputCmd.value = ''; 
+        log(command, 'tx');
+        inputField.value = ''; // Clear input
       } catch (error) {
-        log('Send Failed: ' + error.message, 'err');
+        log('Send Error: ' + error, 'err');
       }
     }
 
+    // Send button click
     document.getElementById('sendBtn').addEventListener('click', sendCommand);
-    
-    // Allow pressing "Enter" on the keyboard to send
-    inputCmd.addEventListener('keypress', (e) => {
+
+    // Press 'Enter' to send
+    inputField.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendCommand();
     });
 
@@ -277,7 +258,7 @@
     function toggleUI(connected) {
       document.getElementById('connectBtn').disabled = connected;
       document.getElementById('disconnectBtn').disabled = !connected;
-      inputCmd.disabled = !connected;
+      inputField.disabled = !connected;
       document.getElementById('sendBtn').disabled = !connected;
     }
   </script>
