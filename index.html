@@ -544,7 +544,14 @@
     document.getElementById('connectBtn').addEventListener('click', async () => {
       try {
         log('Scanning all nearby devices...', 'sys');
-        bleDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [serviceUuid] });
+        bleDevice = await navigator.bluetooth.requestDevice({ 
+          filters: [
+            { namePrefix: 'GRIP' },     // Catches GRIP_INDIA_HOME_CONTROL_NEW
+            { namePrefix: 'ESP' },      // Catches generic ESP32 names
+            { services: [serviceUuid] } // Catches anything broadcasting the UART service
+          ],
+          optionalServices: [serviceUuid] // Still required to access the terminal data!
+        });
         await establishGattConnection(bleDevice);
       } catch (error) {
         if (!error.toString().includes('User cancelled')) { log('Error: ' + error, 'err'); } 
