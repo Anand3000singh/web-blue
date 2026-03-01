@@ -5,23 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ESP32 Console</title>
   <style>
-    /* Global Theme Variables */
     :root {
       --bg-gradient-top: #2a2a4a;
       --bg-gradient-bottom: #121226;
-      --panel-bg: #1e1e30;
+      --panel-bg: rgba(30, 30, 48, 0.85); /* Slightly transparent for the floating pebble */
       --term-bg: #0f111a;
       --text-main: #e2e8f0;
       --text-muted: #64748b;
-      --color-tx: #c084fc; /* Purple */
-      --color-rx: #2dd4bf; /* Teal */
-      --color-sys: #4ade80; /* Green */
-      --color-err: #f87171; /* Red */
-      --btn-active: #6366f1; /* Bright Blue */
+      --color-tx: #c084fc; 
+      --color-rx: #2dd4bf; 
+      --color-sys: #4ade80; 
+      --color-err: #f87171; 
+      --btn-active: #6366f1; 
       --btn-inactive: #334155;
     }
 
-    /* Reset & Full Screen Layout */
     body {
       font-family: system-ui, -apple-system, sans-serif;
       margin: 0;
@@ -32,18 +30,16 @@
       color: var(--text-main);
       display: flex;
       flex-direction: column;
+      position: relative; /* Needed for the floating pebble */
     }
 
-    /* Header & Title */
     h2 {
       margin: 0 0 15px 0;
       font-size: 1.5rem;
       font-weight: 700;
-      letter-spacing: 0.5px;
       color: #ffffff;
     }
 
-    /* Top Controls */
     .top-controls {
       display: flex;
       gap: 10px;
@@ -58,74 +54,74 @@
       font-weight: 600;
       font-size: 1rem;
       cursor: pointer;
-      transition: background 0.2s, opacity 0.2s;
       color: #ffffff;
     }
     
-    #connectBtn { background-color: var(--btn-inactive); }
-    #connectBtn:not([disabled]) { background-color: var(--btn-inactive); }
-    #connectBtn[disabled] { opacity: 0.5; cursor: not-allowed; }
-    
-    #disconnectBtn { background-color: var(--btn-inactive); }
+    #connectBtn, #disconnectBtn { background-color: var(--btn-inactive); }
     #disconnectBtn:not([disabled]) { background-color: var(--btn-active); }
-    #disconnectBtn[disabled] { opacity: 0.5; cursor: not-allowed; }
+    button[disabled] { opacity: 0.5; cursor: not-allowed; }
 
-    /* The Terminal Box (Flex-Grow makes it stretch) */
     #terminal-container {
       flex-grow: 1;
       background-color: var(--term-bg);
       border-radius: 12px;
       padding: 15px;
+      /* Add extra padding at the bottom so text doesn't hide behind the floating pebble */
+      padding-bottom: 80px; 
       overflow-y: auto;
-      margin-bottom: 15px;
+      margin-bottom: 0; 
       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
       font-family: 'Courier New', Courier, monospace;
       font-size: 0.9rem;
       line-height: 1.5;
     }
 
-    /* Custom Scrollbar for Terminal */
     #terminal-container::-webkit-scrollbar { width: 14px; }
-    #terminal-container::-webkit-scrollbar-track {
-      background: transparent;
-      margin: 10px 0; /* Keeps scrollbar away from rounded corners */
-    }
+    #terminal-container::-webkit-scrollbar-track { background: transparent; margin: 10px 0; }
     #terminal-container::-webkit-scrollbar-thumb {
       background-color: #334155;
       border-radius: 10px;
-      border: 4px solid var(--term-bg); /* Matches terminal BG to act as padding */
+      border: 4px solid var(--term-bg); 
     }
 
     .log-line { word-wrap: break-word; margin-bottom: 4px; }
 
-    /* Bottom Input Area */
+    /* --- THE FLOATING PEBBLE --- */
     .input-area {
+      position: fixed; /* Pins it to the screen */
+      bottom: 20px; /* 20px from the bottom */
+      left: 50%;
+      transform: translateX(-50%); /* Centers it perfectly */
+      width: calc(100% - 40px); /* Adjusts to screen width minus margins */
+      max-width: 600px;
       display: flex;
       background-color: var(--panel-bg);
-      border-radius: 10px;
-      padding: 5px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      backdrop-filter: blur(10px); /* Gives it a modern frosted glass look */
+      border-radius: 30px; /* Heavy rounding for the pebble look */
+      padding: 6px 6px 6px 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6); /* Heavy drop shadow to make it float */
+      z-index: 100;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     input[type="text"] {
       flex-grow: 1;
       background: transparent;
       border: none;
-      padding: 12px 15px;
       color: var(--text-main);
       font-family: monospace;
       font-size: 1rem;
       outline: none;
+      padding-right: 10px;
     }
     
     input[type="text"]::placeholder { color: var(--text-muted); }
-    input[type="text"]:disabled { opacity: 0.5; }
 
     #sendBtn {
       flex: 0 0 auto;
       background-color: var(--btn-active);
-      padding: 10px 20px;
-      border-radius: 8px;
+      padding: 12px 24px;
+      border-radius: 25px; /* Round the button to match the pebble */
     }
     #sendBtn[disabled] { background-color: var(--btn-inactive); opacity: 0.5; }
 
@@ -151,22 +147,20 @@
 
   <script>
     const serviceUuid = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-    const rxCharacteristicUuid = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // TX from web to ESP32
-    const txCharacteristicUuid = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // RX from ESP32 to web
+    const rxCharacteristicUuid = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; 
+    const txCharacteristicUuid = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; 
 
     let bleDevice, rxCharacteristic;
     const terminal = document.getElementById('terminal-container');
     const inputField = document.getElementById('inputCmd');
 
-    // Helper to get formatted time [HH:MM:SS]
     function getTimeStamp() {
       const now = new Date();
       return `[${now.toLocaleTimeString('en-US', { hour12: false })}]`;
     }
 
-    // Advanced logging to handle colors and tags based on your screenshot
     function log(text, type = 'sys') {
-      let color = 'var(--color-sys)'; // Default green for system
+      let color = 'var(--color-sys)'; 
       let prefix = '';
       
       if (type === 'err') color = 'var(--color-err)';
@@ -179,16 +173,19 @@
         prefix = `${getTimeStamp()} RX: `;
       }
 
-      const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;"); // Basic sanitization
+      const safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
       terminal.innerHTML += `<div class="log-line" style="color: ${color}">${prefix}${safeText}</div>`;
-      terminal.scrollTop = terminal.scrollHeight; // Auto-scroll to bottom
+      terminal.scrollTop = terminal.scrollHeight; 
     }
 
     document.getElementById('connectBtn').addEventListener('click', async () => {
       try {
-        log('Scanning...', 'sys');
+        log('Scanning all nearby devices...', 'sys');
+        
+        // FIX: Accept all devices so the list populates, but strictly request our service
         bleDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [serviceUuid] }]
+          acceptAllDevices: true,
+          optionalServices: [serviceUuid] 
         });
 
         bleDevice.addEventListener('gattserverdisconnected', () => {
@@ -199,25 +196,22 @@
         const server = await bleDevice.gatt.connect();
         const service = await server.getPrimaryService(serviceUuid);
         
-        // Setup receiving data (RX)
         const txCharacteristic = await service.getCharacteristic(txCharacteristicUuid);
         await txCharacteristic.startNotifications();
         txCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
           const decoder = new TextDecoder('utf-8');
-          const value = decoder.decode(event.target.value).trim(); // trim removes extra newlines
+          const value = decoder.decode(event.target.value).trim(); 
           if (value) log(value, 'rx');
         });
 
-        // Setup sending data (TX)
         rxCharacteristic = await service.getCharacteristic(rxCharacteristicUuid);
 
-        terminal.innerHTML = ''; // Clear terminal on fresh connection
+        terminal.innerHTML = ''; 
         log('Active.', 'sys');
         toggleUI(true);
         inputField.focus();
 
       } catch (error) {
-        // Don't show an error if the user simply cancelled the pairing menu
         if (!error.toString().includes('User cancelled')) {
           log('Error: ' + error, 'err');
         } else {
@@ -232,19 +226,16 @@
 
       try {
         const encoder = new TextEncoder('utf-8');
-        // Sending command with newline character
         await rxCharacteristic.writeValue(encoder.encode(command + '\n'));
         log(command, 'tx');
-        inputField.value = ''; // Clear input
+        inputField.value = ''; 
       } catch (error) {
         log('Send Error: ' + error, 'err');
       }
     }
 
-    // Send button click
     document.getElementById('sendBtn').addEventListener('click', sendCommand);
 
-    // Press 'Enter' to send
     inputField.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendCommand();
     });
