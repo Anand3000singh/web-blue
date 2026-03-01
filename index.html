@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ESP32 Web BLE Terminal</title>
+  <title>ESP32 Web BLE Terminal (All Devices)</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 600px; margin: 20px auto; padding: 10px; }
     #terminal { height: 300px; width: 100%; border: 1px solid #333; overflow-y: auto; margin-bottom: 15px; padding: 10px; background: #1e1e1e; color: #00ff00; font-family: monospace; border-radius: 5px; box-sizing: border-box; }
@@ -15,7 +15,7 @@
 
   <h2>ESP32 Web Terminal</h2>
   <div style="margin-bottom: 10px;">
-    <button id="connectBtn">Connect to ESP32</button>
+    <button id="connectBtn">Scan All Bluetooth Devices</button>
     <button id="disconnectBtn" disabled>Disconnect</button>
   </div>
 
@@ -35,7 +35,6 @@
     let bleDevice, rxCharacteristic;
     const terminal = document.getElementById('terminal');
 
-    // Helper to print to our on-screen terminal
     function log(text, color = '#fff') {
       terminal.innerHTML += `<div style="color: ${color}">${text}</div>`;
       terminal.scrollTop = terminal.scrollHeight;
@@ -43,33 +42,34 @@
 
     document.getElementById('connectBtn').addEventListener('click', async () => {
       try {
-        log('Scanning for ESP32...', '#aaa');
+        log('Scanning ALL nearby Bluetooth devices...', '#aaa');
+        
+        // THE FIX IS HERE: Accept all devices, but declare the service we need later
         bleDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [serviceUuid] }]
+          acceptAllDevices: true,
+          optionalServices: [serviceUuid] 
         });
 
         bleDevice.addEventListener('gattserverdisconnected', () => {
-          log('ESP32 Disconnected.', '#ff5555');
+          log('Device Disconnected.', '#ff5555');
           toggleUI(false);
         });
 
-        log('Connecting to GATT Server...', '#aaa');
+        log(`Connecting to ${bleDevice.name || 'Unnamed Device'}...`, '#aaa');
         const server = await bleDevice.gatt.connect();
 
-        log('Locating UART Service...', '#aaa');
+        log('Looking for UART Service... (This will fail if you picked a non-ESP32 device)', '#aaa');
         const service = await server.getPrimaryService(serviceUuid);
 
-        log('Subscribing to ESP32 Output (TX)...', '#aaa');
+        log('Setting up TX/RX channels...', '#aaa');
         const txCharacteristic = await service.getCharacteristic(txCharacteristicUuid);
         await txCharacteristic.startNotifications();
         
-        // Listen for incoming terminal data from the ESP32
         txCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
           const decoder = new TextDecoder('utf-8');
           log('ESP32> ' + decoder.decode(event.target.value), '#00ff00');
         });
 
-        log('Grabbing Input Channel (RX)...', '#aaa');
         rxCharacteristic = await service.getCharacteristic(rxCharacteristicUuid);
 
         log('Connection Established! Ready to send commands.', '#55ff55');
@@ -80,10 +80,9 @@
       }
     });
 
-    // Send data to the ESP32
     document.getElementById('sendBtn').addEventListener('click', async () => {
       const input = document.getElementById('inputCmd');
-      const command = input.value + '\n'; // Add newline just like a real serial monitor
+      const command = input.value + '\n';
       
       if (!rxCharacteristic || !input.value) return;
 
@@ -91,7 +90,7 @@
         const encoder = new TextEncoder('utf-8');
         await rxCharacteristic.writeValue(encoder.encode(command));
         log('You> ' + input.value, '#55aaff');
-        input.value = ''; // Clear input field
+        input.value = ''; 
       } catch (error) {
         log('Send Error: ' + error, '#ff5555');
       }
@@ -103,7 +102,6 @@
       }
     });
 
-    // Enable/Disable buttons based on connection state
     function toggleUI(connected) {
       document.getElementById('connectBtn').disabled = connected;
       document.getElementById('disconnectBtn').disabled = !connected;
